@@ -1,0 +1,57 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sidecar-controller-sa
+  namespace: kube-system
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: sidecar-controller-cr
+  namespace: kube-system
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods/exec"]
+    verbs: ["create"]
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: sidecar-controller-crb
+  namespace: kube-system
+subjects:
+  - kind: ServiceAccount
+    name: sidecar-controller-sa
+    namespace: kube-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: sidecar-controller-cr
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: kube-system
+  name: sidecar-controller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sidecar-controller
+  template:
+    metadata:
+      labels:
+        app: sidecar-controller
+    spec:
+      serviceAccountName: sidecar-controller-sa
+      containers:
+        - image: <image_repository>:<image_tag>
+          imagePullPolicy: Always
+          name: sidecar-controller
+          resources:
+            limits:
+              cpu: "200m"
+              memory: "128Mi"
